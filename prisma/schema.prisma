@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  password           String?
+  avatar_url         String?
+  phone              String?
+  upi_id             String?
+  notification_pref  NotificationPref @default(WEEKLY)
+  preferred_currency String           @default("INR")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  groups          GroupMember[]
+  paidExpenses    Expense[]     @relation("Payer")
+  expenseSplits   ExpenseSplit[]
+  settlementsFrom Settlement[]  @relation("Payer")
+  settlementsTo   Settlement[]  @relation("Receiver")
+  messages        Message[]
+  created_invites GroupInvite[] @relation("InviteCreator")
+}
+
+enum NotificationPref {
+  WEEKLY
+  MONTHLY
+  NONE
+}
+
+model Group {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  currency      String   @default("INR")
+  is_one_on_one Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  members     GroupMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+  invites     GroupInvite[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  userId   String
+  groupId  String
+  is_admin Boolean  @default(false)
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+enum SplitType {
+  EQUAL
+  UNEQUAL
+  PERCENTAGE
+  SHARE
+}
+
+model Expense {
+  id         String    @id @default(cuid())
+  groupId    String
+  payerId    String
+  title      String
+  amount     Decimal   @db.Decimal(10, 2)
+  split_type SplitType @default(EQUAL)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  group    Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer    User           @relation("Payer", fields: [payerId], references: [id])
+  splits   ExpenseSplit[]
+  messages Message[]
+
+  @@index([groupId])
+  @@index([payerId])
+}
+
+model ExpenseSplit {
+  id         String   @id @default(cuid())
+  expenseId  String
+  userId     String
+  amount     Decimal  @db.Decimal(10, 2)
+  shares     Int?
+  percentage Decimal? @db.Decimal(5, 2)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+}
+
+model Settlement {
+  id         String   @id @default(cuid())
+  groupId    String
+  payerId    String
+  receiverId String
+  amount     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer    User  @relation("Payer", fields: [payerId], references: [id])
+  receiver User  @relation("Receiver", fields: [receiverId], references: [id])
+
+  @@index([groupId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  expenseId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GroupInvite {
+  id         String   @id @default(cuid())
+  token      String   @unique @default(cuid())
+  group_id   String
+  created_by String
+  email      String?
+  used       Boolean  @default(false)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  group   Group @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  creator User  @relation("InviteCreator", fields: [created_by], references: [id])
+
+  @@index([token])
+  @@index([group_id])
+}
