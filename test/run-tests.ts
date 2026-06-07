@@ -5,9 +5,6 @@
 
 import { Decimal } from "@prisma/client/runtime/library";
 
-// ─── Inline the functions so no import aliases needed ─────────────────────────
-
-// splits
 function splitEqually(totalAmount: Decimal, userIds: string[]) {
   const total = new Decimal(totalAmount);
   const count = userIds.length;
@@ -53,7 +50,7 @@ function splitByShares(totalAmount: Decimal, userShares: { userId: string; share
   return results;
 }
 
-// simplifyDebts
+
 type Debt = { from: string; to: string; amount: Decimal };
 function simplifyDebts(debts: Debt[]): Debt[] {
   const netBalance = new Map<string, Decimal>();
@@ -80,8 +77,6 @@ function simplifyDebts(debts: Debt[]): Debt[] {
   return result;
 }
 
-// ─── Test Runner ──────────────────────────────────────────────────────────────
-
 let passed = 0;
 let failed = 0;
 
@@ -100,8 +95,6 @@ function test(name: string, fn: () => void) {
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
-
-// ─── splits.ts Tests ──────────────────────────────────────────────────────────
 
 console.log("\n📦 splits.ts\n");
 
@@ -188,8 +181,6 @@ test("splitByShares — no penny lost", () => {
   assert(total.toNumber() === 100, `total should be 100, got ${total}`);
 });
 
-// ─── simplifyDebts.ts Tests ───────────────────────────────────────────────────
-
 console.log("\n📦 simplifyDebts.ts\n");
 
 test("simplifyDebts — simple A owes B", () => {
@@ -232,8 +223,6 @@ test("simplifyDebts — total amount conserved after simplification", () => {
   const total = result.reduce((sum, d) => sum + d.amount.toNumber(), 0);
   assert(Math.abs(total - 80) < 0.01, `expected ~80, got ${total}`);
 });
-
-// ─── Summary ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${"─".repeat(40)}`);
 console.log(`  ${passed} passed  |  ${failed} failed`);
